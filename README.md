@@ -13,10 +13,10 @@ update at the same time so data is never stale and there's no need to call
 See [./src/example.tsx](./src/example.tsx) for a real example. The general
 pattern:
 
-1. Create a ConvexClient and ConvexQueryClient. Set a global default
-   `queryKeyHashFn` of `convexQueryKeyHashFn` and `queryFn` of that method of
-   the ConvexQueryClient. Connect the ConvexQueryClient to the React Query
-   QueryClient.
+1. Create a ConvexClient and ConvexQueryClient. Set the global default
+   `queryKeyHashFn` to `convexQueryClient.hashFn()` and `queryFn` to
+   `convexQueryClient.queryFn()`. Connect the ConvexQueryClient to the React
+   Query QueryClient.
 
 ```ts
 const convexClient = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL);
@@ -24,8 +24,8 @@ const convexQueryClient = new ConvexQueryClient(convexClient);
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      queryKeyHashFn: convexQueryKeyHashFn,
-      queryFn: convexQueryClient.queryFn,
+      queryKeyHashFn: convexQueryClient.hashFn(),
+      queryFn: convexQueryClient.queryFn(),
     },
   },
 });

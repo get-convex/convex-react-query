@@ -16,6 +16,8 @@
     "declarationMap": true,
     "sourceMap": true,
 
-    "strict": true
+    "strict": true,
+
+    "types": ["vite/client"]
   }
 }

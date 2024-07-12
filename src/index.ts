@@ -1,7 +1,9 @@
 import {
   QueryCache,
   QueryClient,
+  QueryFunction,
   QueryFunctionContext,
+  QueryKey,
   UseQueryOptions,
   hashKey,
 } from "@tanstack/react-query";
@@ -11,7 +13,12 @@ import {
   ConvexReactClientOptions,
   Watch,
 } from "convex/react";
-import { FunctionReference, getFunctionName } from "convex/server";
+import {
+  FunctionArgs,
+  FunctionReference,
+  FunctionReturnType,
+  getFunctionName,
+} from "convex/server";
 import { convexToJson } from "convex/values";
 
 // Re-export React Query-friendly names for Convex hooks.
@@ -53,51 +60,6 @@ function hash(
     convexToJson(queryKey[2]),
   )}`;
 }
-
-// This must be set globally, see
-// https://github.com/TanStack/query/issues/4052#issuecomment-1296174282
-/**
- * Set this globally to use Convex query functions.
- *
- * ```ts
- * const queryClient = new QueryClient({
- *   defaultOptions: {
- *    queries: {
- *       queryKeyHashFn: convexQueryKeyHashFn
- *     },
- *   },
- * });
- */
-export const convexQueryKeyHashFn = <QueryKey extends readonly any[]>(
-  queryKey: QueryKey,
-): string => {
-  if (isConvexQuery(queryKey)) {
-    return hash(queryKey);
-  }
-  return hashKey(queryKey);
-};
-
-/**
- * Use this to specify your own fallback queryKeyHashFn:
- *
- * ```ts
- * const queryClient = new QueryClient({
- *   defaultOptions: {
- *    queries: {
- *       queryKeyHashFn: convexQueryKeyHashFnMiddleware(yourQueryKeyHashFn),
- *     },
- *   },
- * });
- * ```
- */
-export const convexQueryKeyHashFnMiddleware =
-  (next: (queryKey: ReadonlyArray<unknown>) => string) =>
-  (queryKey: ReadonlyArray<unknown>) => {
-    if (isConvexQuery(queryKey)) {
-      return hash(queryKey);
-    }
-    return next(queryKey);
-  };
 
 export interface ConvexQueryClientOptions extends ConvexReactClientOptions {
   /** queryClient can also be set later by calling .connect(ReactqueryClient) */
@@ -301,28 +263,62 @@ export class ConvexQueryClient {
   }
 
   /**
-   * Returns a promise for the query result of a query key containing `['convexQuery', FunctionReference, args]`
-   * and subscribes via WebSocket to future updates.
+   * Returns a promise for the query result of a query key containing
+   * `['convexQuery', FunctionReference, args]` and subscribes via WebSocket
+   * to future updates.
+   *
+   * You can provide a custom fetch function for queries that are not
+   * Convex queries.
    */
-  queryFn = async <T extends FunctionReference<"query", "public">>(
-    context: QueryFunctionContext<ReadonlyArray<unknown>>,
-  ): Promise<T["_returnType"]> => {
-    if (isConvexQuery(context.queryKey)) {
-      const [_, func, args] = context.queryKey;
-      if (isServer) {
-        const client = new ConvexHttpClient(
-          // TODO expose this private property
-          (this.convexClient as any).address as string,
-        );
-        const data = await client.query(func, args);
-        return data;
-      } else {
-        const data = await this.convexClient.query(func, args);
-        return data;
+  queryFn(
+    otherFetch: QueryFunction<unknown, QueryKey> = throwBecauseNotConvexQuery,
+  ) {
+    return async <
+      ConvexQueryReference extends FunctionReference<"query", "public">,
+    >(
+      context: QueryFunctionContext<ReadonlyArray<unknown>>,
+    ): Promise<FunctionReturnType<ConvexQueryReference>> => {
+      if (isConvexQuery(context.queryKey)) {
+        const [_, func, args] = context.queryKey;
+        if (isServer) {
+          const client = new ConvexHttpClient(
+            // TODO expose this private property
+            (this.convexClient as any).address as string,
+          );
+          const data = await client.query(func, args);
+          return data;
+        } else {
+          const data = await this.convexClient.query(func, args);
+          return data;
+        }
       }
-    }
-    throw new Error("Query key is not for a Convex Query: " + context.queryKey);
-  };
+      return otherFetch(context);
+    };
+  }
+
+  /**
+   * Set this globally to use Convex query functions.
+   *
+   * ```ts
+   * const queryClient = new QueryClient({
+   *   defaultOptions: {
+   *    queries: {
+   *       queryKeyHashFn: convexQueryClient.hashFn(),
+   *     },
+   *   },
+   * });
+   *
+   * You can provide a custom hash function for keys that are not for Convex
+   * queries.
+   */
+  hashFn(otherHashKey: (queryKey: ReadonlyArray<unknown>) => string = hashKey) {
+    return (queryKey: ReadonlyArray<unknown>) => {
+      if (isConvexQuery(queryKey)) {
+        return hash(queryKey);
+      }
+      return otherHashKey(queryKey);
+    };
+  }
 
   /**
    * Query options factory for Convex query function subscriptions.
@@ -339,15 +335,15 @@ export class ConvexQueryClient {
    * });
    * ```
    */
-  queryOptions = <Query extends FunctionReference<"query">>(
-    funcRef: Query,
-    queryArgs: Query["_args"],
+  queryOptions = <ConvexQueryReference extends FunctionReference<"query">>(
+    funcRef: ConvexQueryReference,
+    queryArgs: FunctionArgs<ConvexQueryReference>,
   ): Pick<
     UseQueryOptions<
-      Query["_returnType"],
+      FunctionReturnType<ConvexQueryReference>,
       Error,
-      Query["_returnType"],
-      ["convexQuery", Query, Query["_args"]]
+      FunctionReturnType<ConvexQueryReference>,
+      ["convexQuery", ConvexQueryReference, FunctionArgs<ConvexQueryReference>]
     >,
     "queryKey" | "queryFn" | "staleTime"
   > => {
@@ -359,15 +355,19 @@ export class ConvexQueryClient {
         // TODO bigints are not serializeable
         queryArgs,
       ],
-      queryFn: this.queryFn,
+      queryFn: this.queryFn(),
       staleTime: Infinity,
+      // We cannot set hashFn here, see
+      // https://github.com/TanStack/query/issues/4052#issuecomment-1296174282
+      // so the developer must set it globally.
     };
   };
 }
 
 /**
  * Query options factory for Convex query function subscriptions.
- * This options factory requires the Convex queryFn has been set globally.
+ * This options factory requires the `convexQueryClient.queryFn()` has been set
+ * as the default `queryFn` globally.
  *
  * ```
  * useQuery(convexQuery(api.foo.bar, args))
@@ -381,15 +381,17 @@ export class ConvexQueryClient {
  * });
  * ```
  */
-export const convexQuery = <Query extends FunctionReference<"query">>(
-  funcRef: Query,
-  queryArgs: Query["_args"],
+export const convexQuery = <
+  ConvexQueryReference extends FunctionReference<"query">,
+>(
+  funcRef: ConvexQueryReference,
+  queryArgs: FunctionArgs<ConvexQueryReference>,
 ): Pick<
   UseQueryOptions<
-    Query["_returnType"],
+    FunctionReturnType<ConvexQueryReference>,
     Error,
-    Query["_returnType"],
-    ["convexQuery", Query, Query["_args"]]
+    FunctionReturnType<ConvexQueryReference>,
+    ["convexQuery", ConvexQueryReference, FunctionArgs<ConvexQueryReference>]
   >,
   "queryKey" | "staleTime"
 > => {
@@ -404,3 +406,9 @@ export const convexQuery = <Query extends FunctionReference<"query">>(
     staleTime: Infinity,
   };
 };
+
+function throwBecauseNotConvexQuery(
+  context: QueryFunctionContext<ReadonlyArray<unknown>>,
+) {
+  throw new Error("Query key is not for a Convex Query: " + context.queryKey);
+}

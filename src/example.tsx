@@ -1,6 +1,4 @@
 /* eslint-disable jsx-a11y/anchor-is-valid */
-import { useState } from "react";
-import ReactDOM from "react-dom/client";
 import {
   QueryClient,
   QueryClientProvider,
@@ -9,26 +7,24 @@ import {
 } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { ConvexReactClient } from "convex/react";
+import { useState } from "react";
+import ReactDOM from "react-dom/client";
 import { api } from "../convex/_generated/api.js";
-import {
-  ConvexQueryClient,
-  convexQueryKeyHashFn,
-  convexQuery,
-} from "./index.js";
+import { ConvexQueryClient, convexQuery } from "./index.js";
 import "./styles.css";
 
 // Build a global convexClient wherever you would normally create a TanStack Query client.
-const convexClient = new ConvexReactClient(
-  (import.meta as any).env.VITE_CONVEX_URL,
-);
+const convexClient = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL);
 const convexQueryClient = new ConvexQueryClient(convexClient);
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      // The queryKeyHashFn needs to be set globally: it cannot be specified in `setQueryData()`.
-      queryKeyHashFn: convexQueryKeyHashFn,
-      // The queryFn is convenient to set globally to avoid needing to import everywhere.
-      queryFn: convexQueryClient.queryFn,
+      // The queryKeyHashFn needs to be set globally: it cannot be specified
+      // in `setQueryData()`, so the client couldn't update the query results.
+      queryKeyHashFn: convexQueryClient.hashFn(),
+      // The queryFn is convenient to set globally to avoid needing to import
+      // the client everywhere.
+      queryFn: convexQueryClient.queryFn(),
     },
   },
 });
