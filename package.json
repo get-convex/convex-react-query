@@ -29,7 +29,8 @@
     "exclude": [
       "src/example.tsx",
       "src/**/*.test.ts"
-    ]
+    ],
+    "selfLink": false
   },
   "peerDependencies": {
     "@tanstack/react-query": "^5.0.0",
