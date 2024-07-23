@@ -1,4 +1,4 @@
-# convex-react-query
+# @convex-dev/react-query
 
 Instead of polling you subscribe to receive update from server-side query
 functions in a Convex deployment. Convex is a database with server-side

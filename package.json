@@ -1,6 +1,6 @@
 {
-  "name": "@convex-dev/convex-react-query",
-  "version": "0.0.0-alpha.2",
+  "name": "@convex-dev/react-query",
+  "version": "0.0.0-alpha.3",
   "license": "Apache-2.0",
   "type": "module",
   "scripts": {
@@ -34,7 +34,7 @@
   },
   "peerDependencies": {
     "@tanstack/react-query": "^5.0.0",
-    "convex": "^1.13.2"
+    "convex": "^1.13.0"
   },
   "devDependencies": {
     "@tanstack/react-query": "^5.0.0",
