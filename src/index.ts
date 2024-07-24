@@ -6,6 +6,7 @@ import {
   QueryKey,
   UseQueryOptions,
   hashKey,
+  notifyManager,
 } from "@tanstack/react-query";
 import { ConvexHttpClient } from "convex/browser";
 import {
@@ -126,9 +127,11 @@ export class ConvexQueryClient {
   /** Update every query key. Probably not useful, don't use this. */
   onUpdate = () => {
     // Fortunately this does not reset the gc time.
-    for (const key of Object.keys(this.subscriptions)) {
-      this.onUpdateQueryKeyHash(key);
-    }
+    notifyManager.batch(() => {
+      for (const key of Object.keys(this.subscriptions)) {
+        this.onUpdateQueryKeyHash(key);
+      }
+    });
   };
   onUpdateQueryKeyHash(queryHash: string) {
     const subscription = this.subscriptions[queryHash];
