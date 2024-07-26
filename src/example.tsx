@@ -6,12 +6,17 @@ import {
   useQuery,
 } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
-import { ConvexReactClient } from "convex/react";
-import { useState } from "react";
+import { ConvexProvider, ConvexReactClient } from "convex/react";
 import ReactDOM from "react-dom/client";
+import {
+  ConvexQueryClient,
+  convexAction,
+  convexQuery,
+  useConvexMutation,
+} from "./index.js";
+import "./index.css";
+import { FormEvent, useState } from "react";
 import { api } from "../convex/_generated/api.js";
-import { ConvexQueryClient, convexQuery } from "./index.js";
-import "./styles.css";
 
 // Build a global convexClient wherever you would normally create a TanStack Query client.
 const convexClient = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL);
@@ -30,65 +35,92 @@ const queryClient = new QueryClient({
 });
 convexQueryClient.connect(queryClient);
 
-export default function App() {
+function Main() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <Body />
-      <ReactQueryDevtools initialIsOpen />
-    </QueryClientProvider>
+    <ConvexProvider client={convexClient}>
+      <QueryClientProvider client={queryClient}>
+        <App />
+        <ReactQueryDevtools initialIsOpen />
+      </QueryClientProvider>
+    </ConvexProvider>
   );
 }
 
-function Body() {
-  const { mutate, isPending } = useMutation({
-    mutationFn: () =>
-      convexClient.mutation(api.repos.star, { repo: "made/up" }),
-  });
-  const [numComponents, setNumComponents] = useState(1);
-
+function Weather() {
+  const { data, isPending, error } = useQuery(
+    // This query doesn't update reactively, it refetches like a normal queryFn.
+    convexAction(api.weather.getSFWeather, {}),
+  );
+  if (isPending || error) return "?";
+  const fetchedAt = new Date(data.fetchedAt);
   return (
-    <div>
-      <label htmlFor="number-input">Count: </label>
-      <input
-        id="number-input"
-        type="number"
-        value={numComponents}
-        onChange={(e) => setNumComponents(parseInt(e.target.value, 10))}
-        min="0"
-      />
-      <br />
-      <button onClick={() => mutate()}>Ask a friend to a star</button>
-      {isPending ? "***" : ""}
-      {[...Array(numComponents).keys()].map((i) => {
-        return <Example key={i} />;
+    <div className="weather">
+      It is {data.fahrenheit}° F in San Francisco (fetched at{" "}
+      {fetchedAt.toLocaleString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+        second: "2-digit",
       })}
+      ).
     </div>
   );
 }
 
-function Example() {
-  const [, setRerender] = useState<any>();
-  const forceRerender = () => setRerender({});
-
-  const { isPending, error, data } = useQuery(
-    convexQuery(api.repos.get, { repo: "made/up" }),
+function App() {
+  const { data, error, isPending } = useQuery(
+    // This query updates reactively.
+    convexQuery(api.messages.list, {}),
   );
 
-  if (data) {
-    return (
-      <div>
-        <div>error: {error?.toString() || "none :)"}</div>
-        <div>isPending: {isPending}</div>
-        <button onClick={forceRerender}>rerender</button>
-        <h4>{data.name}</h4>
-        <p>{data.description}</p>
-        <strong>👀 {data.subscribers_count}</strong>{" "}
-        <strong>✨ {data.stargazers_count}</strong>{" "}
-        <strong>🍴 {data.forks_count}</strong>
-      </div>
-    );
+  const [newMessageText, setNewMessageText] = useState("");
+  const { mutate, isPending: sending } = useMutation({
+    mutationFn: useConvexMutation(api.messages.send),
+  });
+  const [name] = useState(() => "User " + Math.floor(Math.random() * 10000));
+  async function handleSendMessage(event: FormEvent) {
+    event.preventDefault();
+    if (!sending && newMessageText) {
+      mutate(
+        { body: newMessageText, author: name },
+        {
+          onSuccess: () => setNewMessageText(""),
+        },
+      );
+    }
   }
+  if (error) {
+    return <div>Error: {error.toString()}</div>;
+  }
+  if (isPending) {
+    return <div>loading...</div>;
+  }
+  return (
+    <main>
+      <h1>Convex Chat</h1>
+      <Weather />
+      <p className="badge">
+        <span>{name}</span>
+      </p>
+      <ul>
+        {data.map((message) => (
+          <li key={message._id}>
+            <span>{message.author}:</span>
+            <span>{message.body}</span>
+            <span>{new Date(message._creationTime).toLocaleTimeString()}</span>
+          </li>
+        ))}
+      </ul>
+      <form onSubmit={handleSendMessage}>
+        <input
+          value={newMessageText}
+          onChange={(event) => setNewMessageText(event.target.value)}
+          placeholder="Write a message…"
+        />
+        <input type="submit" value="Send" />
+      </form>
+    </main>
+  );
 }
 
 const rootElement = document.getElementById("root")!;
-ReactDOM.createRoot(rootElement).render(<App />);
+ReactDOM.createRoot(rootElement).render(<Main />);

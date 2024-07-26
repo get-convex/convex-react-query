@@ -49,6 +49,17 @@ function isConvexQuery(
   return queryKey.length >= 2 && queryKey[0] === "convexQuery";
 }
 
+function isConvexAction(
+  queryKey: readonly any[],
+): queryKey is [
+  "convexAction",
+  FunctionReference<"action">,
+  Record<string, any>,
+  {},
+] {
+  return queryKey.length >= 2 && queryKey[0] === "convexAction";
+}
+
 function hash(
   queryKey: [
     "convexQuery",
@@ -295,6 +306,20 @@ export class ConvexQueryClient {
           return data;
         }
       }
+      if (isConvexAction(context.queryKey)) {
+        const [_, func, args] = context.queryKey;
+        if (isServer) {
+          const client = new ConvexHttpClient(
+            // TODO expose this private property
+            (this.convexClient as any).address as string,
+          );
+          const data = await client.action(func, args);
+          return data;
+        } else {
+          const data = await this.convexClient.action(func, args);
+          return data;
+        }
+      }
       return otherFetch(context);
     };
   }
@@ -379,8 +404,8 @@ export class ConvexQueryClient {
  * If you need to specify other options spread it:
  * ```
  * useQuery({
- *   ...convexQuery(api.foo.bar, args),
- *   placeholderData: { name: "me" }
+ *   ...convexQuery(api.messages.list, { channel: 'dogs' }),
+ *   placeholderData: [{ name: "Snowy" }]
  * });
  * ```
  */
@@ -407,6 +432,48 @@ export const convexQuery = <
       queryArgs,
     ],
     staleTime: Infinity,
+  };
+};
+
+/**
+ * Query options factory for Convex action function.
+ * Not that Convex actions are live updating: they follow the normal react-query
+ * semantics of refreshing on
+ *
+ * ```
+ * useQuery(convexQuery(api.weather.now, { location: "SF" }))
+ * ```
+ *
+ * If you need to specify other options spread it:
+ * ```
+ * useQuery({
+ *   ...convexAction(api.weather.now, { location: "SF" }),
+ *   placeholderData: { status: "foggy and cool" }
+ * });
+ * ```
+ */
+export const convexAction = <
+  ConvexActionReference extends FunctionReference<"action">,
+>(
+  funcRef: ConvexActionReference,
+  args: FunctionArgs<ConvexActionReference>,
+): Pick<
+  UseQueryOptions<
+    FunctionReturnType<ConvexActionReference>,
+    Error,
+    FunctionReturnType<ConvexActionReference>,
+    ["convexAction", ConvexActionReference, FunctionArgs<ConvexActionReference>]
+  >,
+  "queryKey" | "staleTime"
+> => {
+  return {
+    queryKey: [
+      "convexAction",
+      // Make query key serializeable
+      getFunctionName(funcRef) as unknown as typeof funcRef,
+      // TODO bigints are not serializeable
+      args,
+    ],
   };
 };
 

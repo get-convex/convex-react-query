@@ -50,6 +50,9 @@ for more about this) If you like, customize the `gcTime` to the length of time a
 query subscription should remain active after all `useQuery()` hooks using it
 have unmounted.
 
+If you need to use a Convex Action as a query, it won't be reactive; you'll get
+all the normal tools from React Query to refetch it.
+
 # Differences from using TanStack Query with `fetch`
 
 New query results are pushed from the server, so a `staleTime` of `Infinity`
@@ -66,10 +69,10 @@ To run this example:
 - `npm install`
 - `npm run dev`
 
-# Mutations
+# Mutations and Actions
 
 If you wrap your app in a `ConvexProvider` you'll be able to use convex hooks
-like `useConvexMutation`:
+like `useConvexMutation` and `useConvexAction`.:
 
 ```tsx
 <ConvexProvider client={convex}>
@@ -85,6 +88,12 @@ You can use this mutation function directly or wrap it in a TanStack Query
 ```ts
 const mutationFn = useConvexMutation(api.board.createColumn);
 const { mutate } = useMutation({ mutationFn });
+```
+
+```ts
+const { mutate } = useMutation({
+  mutationFn: useConvexAction(api.time.getTotal),
+});
 ```
 
 # Authentication (example TODO)
