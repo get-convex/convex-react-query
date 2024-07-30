@@ -98,6 +98,8 @@ export class ConvexQueryClient {
     }
   >;
   unsubscribe: (() => void) | undefined;
+  // Only exists during SSR
+  serverHttpClient?: ConvexHttpClient;
   _queryClient: QueryClient | undefined;
   get queryClient() {
     if (!this._queryClient) {
@@ -123,6 +125,12 @@ export class ConvexQueryClient {
       this._queryClient = options.queryClient;
       this.unsubscribe = this.subscribeInner(
         options.queryClient.getQueryCache(),
+      );
+    }
+    if (isServer) {
+      this.serverHttpClient = new ConvexHttpClient(
+        // TODO use .url once convex@1.14 is released
+        (this.convexClient as any).address as string,
       );
     }
   }
@@ -292,18 +300,14 @@ export class ConvexQueryClient {
     >(
       context: QueryFunctionContext<ReadonlyArray<unknown>>,
     ): Promise<FunctionReturnType<ConvexQueryReference>> => {
+      // Only queries can be requested consistently (at a previous timestamp),
+      // actions and mutations run at the latest timestamp.
       if (isConvexQuery(context.queryKey)) {
         const [_, func, args] = context.queryKey;
         if (isServer) {
-          const client = new ConvexHttpClient(
-            // TODO expose this private property
-            (this.convexClient as any).address as string,
-          );
-          const data = await client.query(func, args);
-          return data;
+          return await this.serverHttpClient!.consistentQuery(func, args);
         } else {
-          const data = await this.convexClient.query(func, args);
-          return data;
+          return await this.convexClient.query(func, args);
         }
       }
       if (isConvexAction(context.queryKey)) {
