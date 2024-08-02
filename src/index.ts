@@ -425,7 +425,7 @@ export const convexQuery = <
     FunctionReturnType<ConvexQueryReference>,
     ["convexQuery", ConvexQueryReference, FunctionArgs<ConvexQueryReference>]
   >,
-  "queryKey" | "staleTime"
+  "queryKey" | "queryFn" | "staleTime"
 > => {
   return {
     queryKey: [
@@ -468,7 +468,7 @@ export const convexAction = <
     FunctionReturnType<ConvexActionReference>,
     ["convexAction", ConvexActionReference, FunctionArgs<ConvexActionReference>]
   >,
-  "queryKey" | "staleTime"
+  "queryKey" | "queryFn" | "staleTime"
 > => {
   return {
     queryKey: [

@@ -67,10 +67,11 @@ function Weather() {
 }
 
 function App() {
-  const { data, error, isPending } = useQuery(
+  const { data, error, isPending } = useQuery({
     // This query updates reactively.
-    convexQuery(api.messages.list, {}),
-  );
+    ...convexQuery(api.messages.list, {}),
+    initialData: [],
+  });
 
   const [newMessageText, setNewMessageText] = useState("");
   const { mutate, isPending: sending } = useMutation({
