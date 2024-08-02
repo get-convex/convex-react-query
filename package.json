@@ -1,6 +1,6 @@
 {
   "name": "@convex-dev/react-query",
-  "version": "0.0.0-alpha.4",
+  "version": "0.0.0-alpha.5",
   "license": "Apache-2.0",
   "type": "module",
   "scripts": {
@@ -20,7 +20,8 @@
   ],
   "tshy": {
     "dialects": [
-      "esm"
+      "esm",
+      "commonjs"
     ],
     "exports": {
       ".": "./src/index.ts",
@@ -59,9 +60,15 @@
       "import": {
         "types": "./dist/esm/index.d.ts",
         "default": "./dist/esm/index.js"
+      },
+      "require": {
+        "types": "./dist/commonjs/index.d.ts",
+        "default": "./dist/commonjs/index.js"
       }
     },
     "./package.json": "./package.json"
   },
-  "module": "./dist/esm/index.js"
+  "module": "./dist/esm/index.js",
+  "main": "./dist/commonjs/index.js",
+  "types": "./dist/commonjs/index.d.ts"
 }
