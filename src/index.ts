@@ -382,9 +382,9 @@ export class ConvexQueryClient {
     return {
       queryKey: [
         "convexQuery",
-        // Make query key serializeable
+        // Make query key serializable
         getFunctionName(funcRef) as unknown as typeof funcRef,
-        // TODO bigints are not serializeable
+        // TODO bigints are not serializable
         queryArgs,
       ],
       queryFn: this.queryFn(),
@@ -430,9 +430,9 @@ export const convexQuery = <
   return {
     queryKey: [
       "convexQuery",
-      // Make query key serializeable
+      // Make query key serializable
       getFunctionName(funcRef) as unknown as typeof funcRef,
-      // TODO bigints are not serializeable
+      // TODO bigints are not serializable
       queryArgs,
     ],
     staleTime: Infinity,
@@ -473,9 +473,9 @@ export const convexAction = <
   return {
     queryKey: [
       "convexAction",
-      // Make query key serializeable
+      // Make query key serializable
       getFunctionName(funcRef) as unknown as typeof funcRef,
-      // TODO bigints are not serializeable
+      // TODO bigints are not serializable
       args,
     ],
   };
