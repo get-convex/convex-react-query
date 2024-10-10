@@ -35,7 +35,7 @@
   },
   "peerDependencies": {
     "@tanstack/react-query": "^5.0.0",
-    "convex": "^1.16.4"
+    "convex": "^1.16.5"
   },
   "devDependencies": {
     "@tanstack/react-query": "^5.51.15",
