@@ -5,6 +5,7 @@ import {
   QueryFunctionContext,
   QueryKey,
   UseQueryOptions,
+  UseSuspenseQueryOptions,
   hashKey,
   notifyManager,
 } from "@tanstack/react-query";
@@ -415,18 +416,37 @@ export class ConvexQueryClient {
  */
 export const convexQuery = <
   ConvexQueryReference extends FunctionReference<"query">,
+  Args extends FunctionArgs<ConvexQueryReference> | "skip",
 >(
   funcRef: ConvexQueryReference,
-  queryArgs: FunctionArgs<ConvexQueryReference>,
-): Pick<
-  UseQueryOptions<
-    FunctionReturnType<ConvexQueryReference>,
-    Error,
-    FunctionReturnType<ConvexQueryReference>,
-    ["convexQuery", ConvexQueryReference, FunctionArgs<ConvexQueryReference>]
-  >,
-  "queryKey" | "queryFn" | "staleTime"
-> => {
+  queryArgs: Args,
+): Args extends "skip"
+  ? Pick<
+      UseQueryOptions<
+        FunctionReturnType<ConvexQueryReference>,
+        Error,
+        FunctionReturnType<ConvexQueryReference>,
+        [
+          "convexQuery",
+          ConvexQueryReference,
+          FunctionArgs<ConvexQueryReference>,
+        ]
+      >,
+      "queryKey" | "queryFn" | "staleTime" | "enabled"
+    >
+  : Pick<
+      UseSuspenseQueryOptions<
+        FunctionReturnType<ConvexQueryReference>,
+        Error,
+        FunctionReturnType<ConvexQueryReference>,
+        [
+          "convexQuery",
+          ConvexQueryReference,
+          FunctionArgs<ConvexQueryReference>,
+        ]
+      >,
+      "queryKey" | "queryFn" | "staleTime"
+    > => {
   return {
     queryKey: [
       "convexQuery",
@@ -436,6 +456,7 @@ export const convexQuery = <
       queryArgs,
     ],
     staleTime: Infinity,
+    ...(queryArgs === "skip" ? { enabled: false } : {}),
   };
 };
 
@@ -458,18 +479,37 @@ export const convexQuery = <
  */
 export const convexAction = <
   ConvexActionReference extends FunctionReference<"action">,
+  Args extends FunctionArgs<ConvexActionReference> | "skip",
 >(
   funcRef: ConvexActionReference,
-  args: FunctionArgs<ConvexActionReference>,
-): Pick<
-  UseQueryOptions<
-    FunctionReturnType<ConvexActionReference>,
-    Error,
-    FunctionReturnType<ConvexActionReference>,
-    ["convexAction", ConvexActionReference, FunctionArgs<ConvexActionReference>]
-  >,
-  "queryKey" | "queryFn" | "staleTime"
-> => {
+  args: Args,
+): Args extends "skip"
+  ? Pick<
+      UseQueryOptions<
+        FunctionReturnType<ConvexActionReference>,
+        Error,
+        FunctionReturnType<ConvexActionReference>,
+        [
+          "convexAction",
+          ConvexActionReference,
+          FunctionArgs<ConvexActionReference>,
+        ]
+      >,
+      "queryKey" | "queryFn" | "staleTime" | "enabled"
+    >
+  : Pick<
+      UseSuspenseQueryOptions<
+        FunctionReturnType<ConvexActionReference>,
+        Error,
+        FunctionReturnType<ConvexActionReference>,
+        [
+          "convexAction",
+          ConvexActionReference,
+          FunctionArgs<ConvexActionReference>,
+        ]
+      >,
+      "queryKey" | "queryFn" | "staleTime"
+    > => {
   return {
     queryKey: [
       "convexAction",
@@ -478,6 +518,7 @@ export const convexAction = <
       // TODO bigints are not serializable
       args,
     ],
+    ...(args === "skip" ? { enabled: false } : {}),
   };
 };
 

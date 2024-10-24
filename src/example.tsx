@@ -4,6 +4,7 @@ import {
   QueryClientProvider,
   useMutation,
   useQuery,
+  useSuspenseQuery,
 } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { ConvexProvider, ConvexReactClient } from "convex/react";
@@ -51,7 +52,7 @@ function Weather() {
     // This query doesn't update reactively, it refetches like a normal queryFn.
     convexAction(api.weather.getSFWeather, {}),
   );
-  if (isPending || error) return "?";
+  if (isPending || error) return <span>?</span>;
   const fetchedAt = new Date(data.fetchedAt);
   return (
     <div className="weather">
