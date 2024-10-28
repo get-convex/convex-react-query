@@ -43,6 +43,15 @@ h1 {
   margin-bottom: 16px;
 }
 
+.message-count {
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.message-count span {
+  cursor: pointer;
+}
+
 ul {
   margin: 8px;
   border-radius: 8px;

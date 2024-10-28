@@ -39,6 +39,16 @@ export {
 
 const isServer = typeof window === "undefined";
 
+function isConvexSkipped(
+  queryKey: readonly any[],
+): queryKey is ["convexQuery" | "convexAction", unknown, "skip"] {
+  return (
+    queryKey.length >= 2 &&
+    ["convexQuery", "convexAction"].includes(queryKey[0]) &&
+    queryKey[2] === "skip"
+  );
+}
+
 function isConvexQuery(
   queryKey: readonly any[],
 ): queryKey is [
@@ -211,6 +221,9 @@ export class ConvexQueryClient {
       if (!isConvexQuery(event.query.queryKey)) {
         return;
       }
+      if (isConvexSkipped(event.query.queryKey)) {
+        return;
+      }
 
       switch (event.type) {
         // A query has been GC'd so no stale value will be available.
@@ -301,6 +314,11 @@ export class ConvexQueryClient {
     >(
       context: QueryFunctionContext<ReadonlyArray<unknown>>,
     ): Promise<FunctionReturnType<ConvexQueryReference>> => {
+      if (isConvexSkipped(context.queryKey)) {
+        throw new Error(
+          "Skipped query should not actually be run, should { enabled: false }",
+        );
+      }
       // Only queries can be requested consistently (at a previous timestamp),
       // actions and mutations run at the latest timestamp.
       if (isConvexQuery(context.queryKey)) {
@@ -453,7 +471,7 @@ export const convexQuery = <
       // Make query key serializable
       getFunctionName(funcRef) as unknown as typeof funcRef,
       // TODO bigints are not serializable
-      queryArgs,
+      queryArgs === "skip" ? "skip" : queryArgs,
     ],
     staleTime: Infinity,
     ...(queryArgs === "skip" ? { enabled: false } : {}),
@@ -516,7 +534,7 @@ export const convexAction = <
       // Make query key serializable
       getFunctionName(funcRef) as unknown as typeof funcRef,
       // TODO bigints are not serializable
-      args,
+      args === "skip" ? {} : args,
     ],
     ...(args === "skip" ? { enabled: false } : {}),
   };

@@ -67,6 +67,28 @@ function Weather() {
   );
 }
 
+function MessageCount() {
+  const [shown, setShown] = useState(true);
+  // This is a conditional query
+  const { data, isPending, error } = useQuery(
+    convexQuery(api.messages.count, shown ? {} : "skip"),
+  );
+  return (
+    <div className="message-count">
+      {isPending
+        ? "? messages"
+        : error
+          ? "error counting messages"
+          : `${data} messages`}
+      <span onClick={() => setShown(!shown)}>
+        {shown
+          ? " (click to disable message count)"
+          : " (click to enable message count)"}
+      </span>
+    </div>
+  );
+}
+
 function App() {
   const { data, error, isPending } = useQuery({
     // This query updates reactively.
@@ -100,6 +122,7 @@ function App() {
     <main>
       <h1>Convex Chat</h1>
       <Weather />
+      <MessageCount />
       <p className="badge">
         <span>{name}</span>
       </p>
