@@ -38,9 +38,9 @@
     "convex": "^1.17.3"
   },
   "devDependencies": {
-    "@tanstack/react-query": "^5.59.15",
+    "@tanstack/react-query": "^5.62.0",
     "@tanstack/eslint-plugin-query": "^5.59.7",
-    "@tanstack/react-query-devtools": "^5.59.15",
+    "@tanstack/react-query-devtools": "^5.62.0",
     "@types/node": "^18.17.0",
     "@types/react": "^18.0.0",
     "@types/react-dom": "^18.0.0",
