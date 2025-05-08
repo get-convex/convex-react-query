@@ -7,7 +7,13 @@ import {
   useSuspenseQuery,
 } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
-import { ConvexProvider, ConvexReactClient } from "convex/react";
+import {
+  Authenticated,
+  AuthLoading,
+  ConvexProvider,
+  ConvexReactClient,
+  Unauthenticated,
+} from "convex/react";
 import ReactDOM from "react-dom/client";
 import {
   ConvexQueryClient,
@@ -18,6 +24,7 @@ import {
 import "./index.css";
 import { FormEvent, useState } from "react";
 import { api } from "../convex/_generated/api.js";
+import { ConvexAuthProvider, useAuthActions } from "@convex-dev/auth/react";
 
 // Build a global convexClient wherever you would normally create a TanStack Query client.
 const convexClient = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL);
@@ -38,19 +45,54 @@ convexQueryClient.connect(queryClient);
 
 function Main() {
   return (
-    <ConvexProvider client={convexClient}>
+    <ConvexAuthProvider client={convexClient}>
       <QueryClientProvider client={queryClient}>
-        <App />
+        <AuthLoading>
+          <div>Loading...</div>
+        </AuthLoading>
+        <Unauthenticated>
+          <SignIn />
+        </Unauthenticated>
+        <Authenticated>
+          <App />
+        </Authenticated>
         <ReactQueryDevtools initialIsOpen />
       </QueryClientProvider>
-    </ConvexProvider>
+    </ConvexAuthProvider>
+  );
+}
+
+function SignIn() {
+  const { signIn } = useAuthActions();
+  const [step, setStep] = useState<"signUp" | "signIn">("signIn");
+  return (
+    <form
+      onSubmit={(event) => {
+        event.preventDefault();
+        const formData = new FormData(event.currentTarget);
+        void signIn("password", formData);
+      }}
+    >
+      <input name="email" placeholder="Email" type="text" />
+      <input name="password" placeholder="Password" type="password" />
+      <input name="flow" type="hidden" value={step} />
+      <button type="submit">{step === "signIn" ? "Sign in" : "Sign up"}</button>
+      <button
+        type="button"
+        onClick={() => {
+          setStep(step === "signIn" ? "signUp" : "signIn");
+        }}
+      >
+        {step === "signIn" ? "Sign up instead" : "Sign in instead"}
+      </button>
+    </form>
   );
 }
 
 function Weather() {
   const { data, isPending, error } = useQuery(
     // This query doesn't update reactively, it refetches like a normal queryFn.
-    convexAction(api.weather.getSFWeather, {}),
+    convexAction(api.weather.getSFWeather, {})
   );
   if (isPending || error) return <span>?</span>;
   const fetchedAt = new Date(data.fetchedAt);
@@ -71,7 +113,7 @@ function MessageCount() {
   const [shown, setShown] = useState(true);
   // This is a conditional query
   const { data, isPending, error } = useQuery(
-    convexQuery(api.messages.count, shown ? {} : "skip"),
+    convexQuery(api.messages.count, shown ? {} : "skip")
   );
   return (
     <div className="message-count">
@@ -108,7 +150,7 @@ function App() {
         { body: newMessageText, author: name },
         {
           onSuccess: () => setNewMessageText(""),
-        },
+        }
       );
     }
   }
