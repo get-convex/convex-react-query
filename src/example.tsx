@@ -20,7 +20,15 @@ import { FormEvent, useState } from "react";
 import { api } from "../convex/_generated/api.js";
 
 // Build a global convexClient wherever you would normally create a TanStack Query client.
-const convexClient = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL);
+const isServer = typeof window === "undefined";
+
+console.log({ isServer });
+
+const url = isServer
+  ? import.meta.env.VITE_CONVEX_URL
+  : "http://foo-bar-baz.convex.cloud";
+
+const convexClient = new ConvexReactClient(url);
 const convexQueryClient = new ConvexQueryClient(convexClient);
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -70,7 +78,7 @@ function Weather() {
 function MessageCount() {
   const [shown, setShown] = useState(true);
   // This is a conditional query
-  const { data, isPending, error } = useQuery(
+  const { data, isPending, error } = useSuspenseQuery(
     convexQuery(api.messages.count, shown ? {} : "skip"),
   );
   return (
