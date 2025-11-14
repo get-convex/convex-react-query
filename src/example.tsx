@@ -105,7 +105,7 @@ function SignIn() {
 function Weather() {
   const { data, isPending, error } = useQuery(
     // This query doesn't update reactively, it refetches like a normal queryFn.
-    convexAction(api.weather.getSFWeather, {}),
+    convexAction(api.weather.getSFWeather, {})
   );
   if (isPending || error) return <span>?</span>;
   const fetchedAt = new Date(data.fetchedAt);
@@ -126,7 +126,7 @@ function MessageCount() {
   const [shown, setShown] = useState(true);
   // This is a conditional query
   const { data, isPending, error } = useQuery(
-    convexQuery(api.messages.count, shown ? {} : "skip"),
+    convexQuery(api.messages.count, shown ? {} : "skip")
   );
   return (
     <div className="message-count">
@@ -166,12 +166,13 @@ function App() {
   });
   async function handleSendMessage(event: FormEvent) {
     event.preventDefault();
+    if (!user?._id) return;
     if (!sending && newMessageText) {
       mutate(
-        { body: newMessageText, author: user?._id },
+        { body: newMessageText, author: user._id },
         {
           onSuccess: () => setNewMessageText(""),
-        },
+        }
       );
     }
   }
