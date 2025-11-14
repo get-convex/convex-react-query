@@ -22,7 +22,6 @@ import "./index.css";
 import { FormEvent, useState } from "react";
 import { api } from "../convex/_generated/api.js";
 import { ConvexAuthProvider, useAuthActions } from "@convex-dev/auth/react";
-import { useQuery as useConvexQuery } from "convex/react";
 
 // Build a global convexClient wherever you would normally create a TanStack Query client.
 const convexClient = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL);
