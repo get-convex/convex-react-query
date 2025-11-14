@@ -462,10 +462,16 @@ export class ConvexQueryClient {
  */
 export const convexQuery = <
   ConvexQueryReference extends FunctionReference<"query">,
-  Args extends FunctionArgs<ConvexQueryReference> | "skip",
+  Args extends FunctionArgs<ConvexQueryReference> | "skip" = FunctionArgs<ConvexQueryReference> | "skip",
 >(
   funcRef: ConvexQueryReference,
-  queryArgs: Args,
+  queryArgs: Args extends "skip"
+    ? "skip"
+    : Args extends FunctionArgs<ConvexQueryReference>
+      ? FunctionArgs<ConvexQueryReference> extends Args
+        ? Args
+        : never
+      : never,
 ): Args extends "skip"
   ? Pick<
       UseQueryOptions<
@@ -525,10 +531,16 @@ export const convexQuery = <
  */
 export const convexAction = <
   ConvexActionReference extends FunctionReference<"action">,
-  Args extends FunctionArgs<ConvexActionReference> | "skip",
+  Args extends FunctionArgs<ConvexActionReference> | "skip" = FunctionArgs<ConvexActionReference> | "skip",
 >(
   funcRef: ConvexActionReference,
-  args: Args,
+  args: Args extends "skip"
+    ? "skip"
+    : Args extends FunctionArgs<ConvexActionReference>
+      ? FunctionArgs<ConvexActionReference> extends Args
+        ? Args
+        : never
+      : never,
 ): Args extends "skip"
   ? Pick<
       UseQueryOptions<

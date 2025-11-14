@@ -46,5 +46,10 @@ describe("query options factory types", () => {
       // @ts-expect-error Queries with "skip" can't be used with useSuspenseQuery
       useSuspenseQuery(query);
     }
+
+    {
+      // @ts-expect-error api.messages.list expects empty args {}, not { something: 123 }
+      const query = convexQuery(api.messages.list, { something: 123 });
+    }
   });
 });

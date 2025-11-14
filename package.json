@@ -12,6 +12,7 @@
     "preview": "vite preview",
     "test:types": "tsc --noEmit",
     "prepare": "tshy",
+    "test": "vitest run --typecheck",
     "prepack": "node src/scripts/dont-publish-alpha-as-latest.mjs"
   },
   "files": [
@@ -80,7 +81,6 @@
   "module": "./dist/esm/index.js",
   "main": "./dist/commonjs/index.js",
   "types": "./dist/commonjs/index.d.ts",
-  "dependencies": {},
   "overrides": {
     "typescript": "~5.0.3"
   }
