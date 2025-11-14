@@ -150,15 +150,16 @@ function App() {
 
   const { data, error, isPending } = useQuery({
     // This query updates reactively.
-    ...convexQuery(api.messages.list, {}),
+    ...convexQuery(api.messages.list),
     initialData: [],
   });
+
   const {
     data: user,
     error: _userError,
     isPending: _userIsPending,
   } = useQuery({
-    ...convexQuery(api.user.getCurrent, {}),
+    ...convexQuery(api.user.getCurrent),
     initialData: null,
   });
 

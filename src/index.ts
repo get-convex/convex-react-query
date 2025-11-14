@@ -21,6 +21,8 @@ import {
   FunctionReturnType,
   getFunctionName,
 } from "convex/server";
+
+type EmptyObject = Record<string, never>;
 import { convexToJson } from "convex/values";
 
 // Re-export React Query-friendly names for Convex hooks.
@@ -40,7 +42,7 @@ export {
 const isServer = typeof window === "undefined";
 
 function isConvexSkipped(
-  queryKey: readonly any[],
+  queryKey: readonly any[]
 ): queryKey is ["convexQuery" | "convexAction", unknown, "skip"] {
   return (
     queryKey.length >= 2 &&
@@ -50,7 +52,7 @@ function isConvexSkipped(
 }
 
 function isConvexQuery(
-  queryKey: readonly any[],
+  queryKey: readonly any[]
 ): queryKey is [
   "convexQuery",
   FunctionReference<"query">,
@@ -61,7 +63,7 @@ function isConvexQuery(
 }
 
 function isConvexAction(
-  queryKey: readonly any[],
+  queryKey: readonly any[]
 ): queryKey is [
   "convexAction",
   FunctionReference<"action">,
@@ -72,15 +74,10 @@ function isConvexAction(
 }
 
 function hash(
-  queryKey: [
-    "convexQuery",
-    FunctionReference<"query">,
-    Record<string, any>,
-    {},
-  ],
+  queryKey: ["convexQuery", FunctionReference<"query">, Record<string, any>, {}]
 ): string {
   return `convexQuery|${getFunctionName(queryKey[1])}|${JSON.stringify(
-    convexToJson(queryKey[2]),
+    convexToJson(queryKey[2])
   )}`;
 }
 
@@ -143,7 +140,7 @@ export class ConvexQueryClient {
   get queryClient() {
     if (!this._queryClient) {
       throw new Error(
-        "ConvexQueryClient not connected to TanStack QueryClient.",
+        "ConvexQueryClient not connected to TanStack QueryClient."
       );
     }
     return this._queryClient;
@@ -152,7 +149,7 @@ export class ConvexQueryClient {
     /** A ConvexReactClient instance or a URL to use to instantiate one. */
     client: ConvexReactClient | string,
     /** Options mostly for the ConvexReactClient to be constructed. */
-    options: ConvexQueryClientOptions = {},
+    options: ConvexQueryClientOptions = {}
   ) {
     if (typeof client === "string") {
       this.convexClient = new ConvexReactClient(client, options);
@@ -168,7 +165,7 @@ export class ConvexQueryClient {
     if (options.queryClient) {
       this._queryClient = options.queryClient;
       this.unsubscribe = this.subscribeInner(
-        options.queryClient.getQueryCache(),
+        options.queryClient.getQueryCache()
       );
     }
     if (isServer) {
@@ -198,7 +195,7 @@ export class ConvexQueryClient {
     if (!subscription) {
       // If we have no record of this subscription that should be a logic error.
       throw new Error(
-        `Internal ConvexQueryClient error: onUpdateQueryKeyHash called for ${queryHash}`,
+        `Internal ConvexQueryClient error: onUpdateQueryKeyHash called for ${queryHash}`
       );
     }
 
@@ -240,7 +237,7 @@ export class ConvexQueryClient {
           fetchStatus: "idle",
           status: "error",
         },
-        { meta: "set by ConvexQueryClient" },
+        { meta: "set by ConvexQueryClient" }
       );
     }
   }
@@ -278,7 +275,7 @@ export class ConvexQueryClient {
             func,
             args,
             // TODO pass journals through
-            {},
+            {}
           );
           const unsubscribe = watch.onUpdate(() => {
             this.onUpdateQueryKeyHash(event.query.queryHash);
@@ -337,16 +334,16 @@ export class ConvexQueryClient {
    * Convex queries.
    */
   queryFn(
-    otherFetch: QueryFunction<unknown, QueryKey> = throwBecauseNotConvexQuery,
+    otherFetch: QueryFunction<unknown, QueryKey> = throwBecauseNotConvexQuery
   ) {
     return async <
       ConvexQueryReference extends FunctionReference<"query", "public">,
     >(
-      context: QueryFunctionContext<ReadonlyArray<unknown>>,
+      context: QueryFunctionContext<ReadonlyArray<unknown>>
     ): Promise<FunctionReturnType<ConvexQueryReference>> => {
       if (isConvexSkipped(context.queryKey)) {
         throw new Error(
-          "Skipped query should not actually be run, should { enabled: false }",
+          "Skipped query should not actually be run, should { enabled: false }"
         );
       }
       // Only queries can be requested consistently (at a previous timestamp),
@@ -416,7 +413,7 @@ export class ConvexQueryClient {
    */
   queryOptions = <ConvexQueryReference extends FunctionReference<"query">>(
     funcRef: ConvexQueryReference,
-    queryArgs: FunctionArgs<ConvexQueryReference>,
+    queryArgs: FunctionArgs<ConvexQueryReference>
   ): Pick<
     UseQueryOptions<
       FunctionReturnType<ConvexQueryReference>,
@@ -460,18 +457,45 @@ export class ConvexQueryClient {
  * });
  * ```
  */
-export const convexQuery = <
+// Overload for queries with empty args (optional second parameter)
+export function convexQuery<
   ConvexQueryReference extends FunctionReference<"query">,
-  Args extends FunctionArgs<ConvexQueryReference> | "skip" = FunctionArgs<ConvexQueryReference> | "skip",
 >(
   funcRef: ConvexQueryReference,
-  queryArgs: Args extends "skip"
-    ? "skip"
-    : Args extends FunctionArgs<ConvexQueryReference>
-      ? FunctionArgs<ConvexQueryReference> extends Args
-        ? Args
-        : never
-      : never,
+  queryArgs?: EmptyObject | "skip"
+): FunctionArgs<ConvexQueryReference> extends EmptyObject
+  ? Pick<
+      UseQueryOptions<
+        FunctionReturnType<ConvexQueryReference>,
+        Error,
+        FunctionReturnType<ConvexQueryReference>,
+        [
+          "convexQuery",
+          ConvexQueryReference,
+          FunctionArgs<ConvexQueryReference>,
+        ]
+      >,
+      "queryKey" | "queryFn" | "staleTime" | "enabled"
+    >
+  : never;
+
+// Overload for queries with required args (non-empty)
+export function convexQuery<
+  ConvexQueryReference extends FunctionReference<"query">,
+  Args extends
+    | (FunctionArgs<ConvexQueryReference> extends infer A
+        ? A extends FunctionArgs<ConvexQueryReference>
+          ? FunctionArgs<ConvexQueryReference> extends A
+            ? A
+            : never
+          : never
+        : never)
+    | "skip",
+>(
+  funcRef: ConvexQueryReference,
+  queryArgs: FunctionArgs<ConvexQueryReference> extends EmptyObject
+    ? never
+    : Args
 ): Args extends "skip"
   ? Pick<
       UseQueryOptions<
@@ -498,19 +522,28 @@ export const convexQuery = <
         ]
       >,
       "queryKey" | "queryFn" | "staleTime"
-    > => {
+    >;
+
+// Implementation
+export function convexQuery<
+  ConvexQueryReference extends FunctionReference<"query">,
+>(
+  funcRef: ConvexQueryReference,
+  queryArgs?: FunctionArgs<ConvexQueryReference> | "skip"
+): any {
+  const finalArgs = queryArgs ?? {};
   return {
     queryKey: [
       "convexQuery",
       // Make query key serializable
       getFunctionName(funcRef) as unknown as typeof funcRef,
       // TODO bigints are not serializable
-      queryArgs === "skip" ? "skip" : queryArgs,
+      finalArgs === "skip" ? "skip" : finalArgs,
     ],
     staleTime: Infinity,
-    ...(queryArgs === "skip" ? { enabled: false } : {}),
+    ...(finalArgs === "skip" ? { enabled: false } : {}),
   };
-};
+}
 
 /**
  * Query options factory for Convex action function.
@@ -529,18 +562,43 @@ export const convexQuery = <
  * });
  * ```
  */
-export const convexAction = <
+// Overload for actions with empty args (optional second parameter)
+export function convexAction<
   ConvexActionReference extends FunctionReference<"action">,
-  Args extends FunctionArgs<ConvexActionReference> | "skip" = FunctionArgs<ConvexActionReference> | "skip",
 >(
   funcRef: ConvexActionReference,
-  args: Args extends "skip"
-    ? "skip"
-    : Args extends FunctionArgs<ConvexActionReference>
-      ? FunctionArgs<ConvexActionReference> extends Args
-        ? Args
-        : never
-      : never,
+  args?: EmptyObject | "skip"
+): FunctionArgs<ConvexActionReference> extends EmptyObject
+  ? Pick<
+      UseQueryOptions<
+        FunctionReturnType<ConvexActionReference>,
+        Error,
+        FunctionReturnType<ConvexActionReference>,
+        [
+          "convexAction",
+          ConvexActionReference,
+          FunctionArgs<ConvexActionReference>,
+        ]
+      >,
+      "queryKey" | "queryFn" | "staleTime" | "enabled"
+    >
+  : never;
+
+// Overload for actions with required args (non-empty)
+export function convexAction<
+  ConvexActionReference extends FunctionReference<"action">,
+  Args extends
+    | (FunctionArgs<ConvexActionReference> extends infer A
+        ? A extends FunctionArgs<ConvexActionReference>
+          ? FunctionArgs<ConvexActionReference> extends A
+            ? A
+            : never
+          : never
+        : never)
+    | "skip",
+>(
+  funcRef: ConvexActionReference,
+  args: FunctionArgs<ConvexActionReference> extends EmptyObject ? never : Args
 ): Args extends "skip"
   ? Pick<
       UseQueryOptions<
@@ -567,21 +625,31 @@ export const convexAction = <
         ]
       >,
       "queryKey" | "queryFn" | "staleTime"
-    > => {
+    >;
+
+// Implementation
+export function convexAction<
+  ConvexActionReference extends FunctionReference<"action">,
+>(
+  funcRef: ConvexActionReference,
+  args?: FunctionArgs<ConvexActionReference> | "skip"
+): any {
+  const finalArgs = args ?? {};
   return {
     queryKey: [
       "convexAction",
       // Make query key serializable
       getFunctionName(funcRef) as unknown as typeof funcRef,
       // TODO bigints are not serializable
-      args === "skip" ? {} : args,
+      finalArgs === "skip" ? {} : finalArgs,
     ],
-    ...(args === "skip" ? { enabled: false } : {}),
+    staleTime: Infinity,
+    ...(finalArgs === "skip" ? { enabled: false } : {}),
   };
-};
+}
 
 function throwBecauseNotConvexQuery(
-  context: QueryFunctionContext<ReadonlyArray<unknown>>,
+  context: QueryFunctionContext<ReadonlyArray<unknown>>
 ) {
   throw new Error("Query key is not for a Convex Query: " + context.queryKey);
 }

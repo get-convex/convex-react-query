@@ -51,5 +51,50 @@ describe("query options factory types", () => {
       // @ts-expect-error api.messages.list expects empty args {}, not { something: 123 }
       const query = convexQuery(api.messages.list, { something: 123 });
     }
+
+    {
+      // Should be able to omit args when function has no args (empty object)
+      const query = convexQuery(api.messages.list);
+      const result = useQuery(query);
+      const data: QueryFunc["_returnType"] | undefined = result.data;
+    }
+
+    {
+      // Should still be able to pass {} explicitly for empty args functions
+      const query = convexQuery(api.messages.list, {});
+      const result = useQuery(query);
+      const data: QueryFunc["_returnType"] | undefined = result.data;
+    }
+
+    {
+      // Should still be able to pass "skip" for empty args functions
+      const query = convexQuery(api.messages.list, "skip");
+      const result = useQuery(query);
+      const data: QueryFunc["_returnType"] | undefined = result.data;
+    }
+  });
+
+  test("required args for queries/actions with args", () => {
+    if (1 + 2 === 3) return; // test types only
+
+    type ActionFunc = typeof api.weather.getSFWeather;
+    {
+      // Actions with empty args should allow omitting args
+      const action = convexAction(api.weather.getSFWeather);
+      const result = useQuery(action);
+      const data: ActionFunc["_returnType"] | undefined = result.data;
+    }
+
+    {
+      // Actions with empty args should still allow passing {}
+      const action = convexAction(api.weather.getSFWeather, {});
+      const result = useQuery(action);
+      const data: ActionFunc["_returnType"] | undefined = result.data;
+    }
+
+    {
+      // @ts-expect-error Actions with empty args should reject extra properties
+      const action = convexAction(api.weather.getSFWeather, { something: 123 });
+    }
   });
 });
