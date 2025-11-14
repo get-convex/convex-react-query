@@ -106,7 +106,7 @@ function SignIn() {
 function Weather() {
   const { data, isPending, error } = useQuery(
     // This query doesn't update reactively, it refetches like a normal queryFn.
-    convexAction(api.weather.getSFWeather, {})
+    convexAction(api.weather.getSFWeather)
   );
   if (isPending || error) return <span>?</span>;
   const fetchedAt = new Date(data.fetchedAt);
