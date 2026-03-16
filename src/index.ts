@@ -282,8 +282,11 @@ export class ConvexQueryClient<
         // A query has been GC'd so no stale value will be available.
         // In Convex this means we should unsubscribe.
         case "removed": {
-          this.subscriptions[event.query.queryHash].unsubscribe();
-          delete this.subscriptions[event.query.queryHash];
+          const subscription = this.subscriptions[event.query.queryHash];
+          if (subscription) {
+            subscription.unsubscribe();
+            delete this.subscriptions[event.query.queryHash];
+          }
           break;
         }
         // A query has been requested for the first time.
