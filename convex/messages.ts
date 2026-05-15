@@ -2,6 +2,10 @@ import { mutation } from "./_generated/server.js";
 import { query } from "./_generated/server.js";
 import { v } from "convex/values";
 import { vv } from "./schema.js";
+import {
+  paginationOptsValidator,
+  paginationResultValidator,
+} from "convex/server";
 
 export const list = query({
   args: {},
@@ -82,5 +86,20 @@ export const send = mutation({
   handler: async (ctx, args) => {
     const message = { body: args.body, author: args.author };
     await ctx.db.insert("messages", message);
+  },
+});
+
+export const getByAuthorPaginated = query({
+  args: {
+    authorId: v.id("users"),
+    paginationOpts: paginationOptsValidator,
+  },
+  returns: paginationResultValidator(vv.doc("messages")),
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("messages")
+      .withIndex("by_author", (q) => q.eq("author", args.authorId))
+      .order("desc")
+      .paginate(args.paginationOpts);
   },
 });

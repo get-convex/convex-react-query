@@ -1,6 +1,7 @@
 import {
   QueryClient,
   QueryClientProvider,
+  useInfiniteQuery,
   useMutation,
   useQuery,
 } from "@tanstack/react-query";
@@ -10,12 +11,14 @@ import {
   AuthLoading,
   ConvexReactClient,
   Unauthenticated,
+  usePaginatedQuery,
 } from "convex/react";
 import ReactDOM from "react-dom/client";
 import {
   ConvexQueryClient,
   convexAction,
   convexQuery,
+  convexPaginatedQuery,
   useConvexMutation,
 } from "./index.js";
 import "./index.css";
@@ -23,6 +26,7 @@ import { FormEvent, useState } from "react";
 import { api } from "../convex/_generated/api.js";
 import { ConvexAuthProvider, useAuthActions } from "@convex-dev/auth/react";
 import { SuspenseMessageCountWithFallback } from "./suspense.js";
+import { Id } from "../convex/_generated/dataModel.js";
 
 // Build a global convexClient wherever you would normally create a TanStack Query client.
 const convexClient = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL);
@@ -230,6 +234,7 @@ function App() {
       <p className="badge">
         <span>{user?.email}</span>
       </p>
+      {user?._id ? <PaginatedMessages userId={user._id} /> : null}
       <ul>
         {data.map((message) => (
           <li key={message._id}>
@@ -247,9 +252,74 @@ function App() {
         />
         <input type="submit" value="Send" />
       </form>
+      <button
+        onClick={() =>
+          console.info("Subscriptions", convexQueryClient.subscriptions)
+        }
+      >
+        Console Log Subscriptions
+      </button>
     </main>
   );
 }
+
+const PaginatedMessages = ({ userId }: { userId: Id<"users"> }) => {
+  const {
+    data,
+    error,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isPending,
+  } = useInfiniteQuery({
+    ...convexPaginatedQuery(
+      api.messages.getByAuthorPaginated,
+      {
+        authorId: userId,
+      },
+      { initialNumItems: 3 },
+    ),
+    throwOnError: false,
+  });
+
+  if (data === undefined) {
+    return <div>Loading paginated messages...</div>;
+  }
+  const messages = data.pages.flatMap((page) => page.page) ?? [];
+
+  return (
+    <section>
+      <h2>Paginated messages from you</h2>
+      {isPending ? (
+        <div>Loading paginated messages...</div>
+      ) : messages.length === 0 ? (
+        <div>No messages from you yet.</div>
+      ) : (
+        <ul>
+          {messages.reverse().map((message) => (
+            <li key={message._id}>
+              <span>{message.body}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+      <button
+        type="button"
+        disabled={!hasNextPage || isFetchingNextPage}
+        onClick={() => void fetchNextPage()}
+      >
+        {isFetchingNextPage
+          ? "Loading more..."
+          : hasNextPage
+            ? "Load more"
+            : "No more messages"}
+      </button>
+      <div>
+        Loaded {messages.length} message{messages.length === 1 ? "" : "s"}
+      </div>
+    </section>
+  );
+};
 
 const rootElement = document.getElementById("root")!;
 ReactDOM.createRoot(rootElement).render(<Main />);
