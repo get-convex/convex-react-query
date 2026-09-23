@@ -20,7 +20,7 @@ export const list = query({
     const messages = await ctx.db.query("messages").collect();
     return Promise.all(
       messages.map(async (message) => {
-        const author = await ctx.db.get(message.author);
+        const author = await ctx.db.get("users", message.author);
         if (!author) {
           throw new Error("Author not found");
         }
@@ -58,7 +58,7 @@ export const getByAuthor = query({
   handler: async (ctx, args) => {
     return await ctx.db
       .query("messages")
-      .filter((q) => q.eq(q.field("author"), args.authorId))
+      .withIndex("by_author", (q) => q.eq("author", args.authorId))
       .collect();
   },
 });
